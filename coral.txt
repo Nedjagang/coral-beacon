@@ -1,0 +1,694 @@
+What is Coral?
+                                                                                                                                                                              Coral is a CLI tool that lets you query live data sources using SQL.
+
+  Instead of jumping between dashboards, APIs, and UIs, you write SQL queries and Coral fetches the data for you from connected services like:
+
+  - GitHub (PRs, issues, commits)
+  - Slack (messages, channels)
+  - Linear (tickets, projects)
+  - Datadog (metrics, logs)
+  - Sentry (errors, events)
+  - ...and custom HTTP APIs you define yourself
+
+  Think of it like having a SQL database, except the "tables" are actually live API endpoints.
+
+  ---
+  The Mental Model
+
+  coral sql "SELECT * FROM github.pull_requests WHERE repo = 'my-repo' LIMIT 10"
+            ^          ^        ^
+            CLI cmd    source   table (= API endpoint)
+
+  - Schema = the service (e.g., github, slack, linear)
+  - Table = a dataset from that service (e.g., pull_requests, issues)
+  - Table functions = tables that require arguments (like calling an API with params)
+
+  ---
+  How to Get Started
+
+  Step 1 — Install Coral CLI
+
+  npm install -g @fleetapp/coral-cli   # or however it's distributed in your env
+
+  Step 2 — Discover what's available
+
+  # See all available tables
+  coral sql "SELECT schema_name, table_name, description FROM coral.tables"
+
+  # See table functions (API-style endpoints)
+  coral sql "SELECT schema_name, function_name, description FROM coral.table_functions"
+
+  Step 3 — Read the guide for a table before querying it
+
+  coral sql "SELECT guide FROM coral.tables WHERE table_name = 'pull_requests'"
+
+  Step 4 — Check required filters (important!)
+
+  Some tables require WHERE clauses or the query will fail:
+
+  coral sql "SELECT column_name, is_required_filter FROM coral.columns WHERE schema_name = 'github' AND table_name = 'pull_requests'"
+
+  Step 5 — Run your first real query
+
+  coral sql "SELECT title, state, created_at FROM github.pull_requests WHERE repo = 'my-org/my-repo' LIMIT 5"
+
+  ---
+  What would you like to build?
+
+  Tell me what data source you want to connect to (GitHub, Linear, Slack, etc.) and what you want to query — I'll walk you through setting it up step by step.
+
+✻ Baked for 18s
+
+> I understood these are SQL queries but still am not getting solid idea on how this works. I want to prepare myself for the hackathon where I build AI SRE Investigator·     PagerDuty + Datadog + GitHub + StatusGator                                                                                                                                                                                                                                                                                                              Agent correlates high-urgency incidents with recent deploys, metrics, and third-party service status to auto-generate incident summaries. Where I aim to win this           hackathon on Enterprise Agent track. Judging Criteria                                                                                                                       🏴 Potential Impact                                                                                                                                                                                                                                                                                                                                     How effectively does the project address a meaningful problem using Coral's data retrieval capabilities?
+  ⚓ Creativity & Originality
+
+  How unique is the idea? How creatively is Coral used to solve problems across multiple data sources?
+  🗺️ Learning & Growth
+
+  The learning curve tackled during the hackathon, especially for first-time Coral users.
+  ⚔️ Technical Implementation
+
+  How well was the idea executed technically? Quality of integration with Coral and SQL queries.
+  🎨 Aesthetics & UX
+
+  How intuitive and user-friendly is the final experience? Frontend, CLI, or agent interface.
+  🪸 Best Use of Coral
+
+  How effectively does the project leverage Coral's SQL interface, cross-source joins, and caching? this is the judging criteria. Need to have and go GOD mode
+
+● Let me run live Coral discovery queries so you can see exactly how it works in practice, and then we'll plan your hackathon project.
+
+● Bash(coral sql "SELECT schema_name, table_name, description FROM coral.tables ORDER BY schema_name" 2>&1)
+  ⎿  Error: Exit code 127
+     /usr/bin/bash: line 1: coral: command not found
+
+● Bash(which coral 2>/dev/null || npm list -g coral 2>/dev/null || npx coral --version 2>/dev/null || echo "coral not installed")
+  ⎿  C:\Users\pp\AppData\Roaming\npm
+     └── (empty)
+
+     coral not installed
+
+● Coral isn't installed yet. Let me look up how to install it and also get the full picture of what Coral actually is.
+
+● Web Search("Coral SQL CLI tool data sources hackathon 2026 installation getting started")
+  ⎿  Did 1 search in 7s
+
+● Web Search("coral cli fleet app SQL query PagerDuty Datadog GitHub sources hackathon")
+  ⎿  Did 1 search in 8s
+
+● Fetch(https://withcoral.com/)
+  ⎿  Received 15KB (200 OK)
+
+● Fetch(https://github.com/withcoral/coral)
+  ⎿  Received 383KB (200 OK)
+
+● Fetch(https://withcoral.com/docs/reference/bundled-sources)
+  ⎿  Received 16.6KB (200 OK)
+
+● Fetch(https://www.wemakedevs.org/hackathons/coral)
+  ⎿  Received 163.2KB (200 OK)
+
+● Now I have everything. Let me give you the full picture — how Coral works, and your GOD-mode strategy to win.
+
+  ---
+  What Coral Actually Is (Concrete Mental Model)
+
+  Forget SQL databases for a moment. Imagine this:                                                                                                                          
+  PagerDuty API  ──┐
+  Datadog API    ──┤──► CORAL ──► You write ONE SQL query across all of them
+  GitHub API     ──┤
+  StatusGator API──┘
+
+  Coral sits in the middle. It:
+  - Handles auth, pagination, rate limits for each API
+  - Maps each API's response into a "table" you can query
+  - Lets you JOIN across services — like joining PagerDuty incidents with GitHub PRs in one query
+
+  -- This is the power: one query, 3 live APIs
+  SELECT
+    i.title AS incident,
+    p.title AS recent_deploy,
+    m.value AS error_rate
+  FROM pagerduty.incidents i
+  JOIN github.pull_requests p
+    ON p.merged_at BETWEEN i.created_at - INTERVAL '2 hours' AND i.created_at
+  JOIN datadog.metrics m
+    ON m.metric = 'error.rate'
+  WHERE i.urgency = 'high'
+
+  That's it. That's Coral's superpower.
+
+  ---
+  Install It Right Now
+
+  # macOS
+  brew install withcoral/tap/coral
+
+  # Linux/WSL (you're on WSL)
+  curl -fsSL https://withcoral.com/install.sh | sh
+
+  Then add your sources:
+  coral source add --interactive github      # asks for GITHUB_TOKEN
+  coral source add --interactive datadog     # asks for DD_API_KEY + DD_APP_KEY
+  coral source add --interactive pagerduty   # asks for PD_API_KEY
+  coral source add --interactive statusgator # asks for SG_API_KEY
+
+  Verify everything works:
+  coral sql "SELECT schema_name, table_name FROM coral.tables ORDER BY 1, 2"
+
+  ---
+  Your GOD-Mode Hackathon Plan
+
+  Hackathon: May 25–31 | Early Bird: May 18 (3 DAYS FROM NOW — register today!)
+  Prize: MacBook Neo per teammate
+
+  The judges are literally using your project (AI SRE Investigator) as the example. That means they WANT to see it done brilliantly. Here's how you go beyond the example
+  and win:
+
+  ---
+  The Architecture
+
+  User/Agent asks: "What caused the P1 incident at 3am?"
+           │
+           ▼
+    [Claude Agent]
+           │
+      coral sql ──► PagerDuty  (get the incident, severity, affected service)
+      coral sql ──► GitHub     (get PRs merged in the 2 hours before incident)
+      coral sql ──► Datadog    (get error rate spike, anomalous metrics)
+      coral sql ──► StatusGator (get third-party service outages at that time)
+           │
+           ▼
+    Correlate everything → Auto-generate incident summary
+
+  ---
+  The 5 Killer SQL Queries (what judges will love)
+
+  1. Find incidents + their likely culprit deploy (cross-source JOIN)
+  SELECT
+    i.id, i.title, i.urgency, i.created_at,
+    pr.number AS deploy_pr, pr.title AS deploy_title, pr.merged_at,
+    pr.html_url
+  FROM pagerduty.incidents i
+  JOIN github.pull_requests pr
+    ON pr.merged_at BETWEEN i.created_at - INTERVAL '2 hours' AND i.created_at
+  WHERE i.urgency = 'high'
+    AND i.status = 'triggered'
+  ORDER BY i.created_at DESC
+  LIMIT 10
+
+  2. Check if third-party services were down (StatusGator)
+  SELECT
+    i.title AS our_incident,
+    si.name AS external_service,
+    si.status,
+    si.started_at
+  FROM pagerduty.incidents i
+  JOIN statusgator.incidents si
+    ON si.started_at BETWEEN i.created_at - INTERVAL '30 minutes' AND i.created_at + INTERVAL '30 minutes'
+  WHERE i.urgency = 'high'
+
+  3. Correlate with Datadog error spikes
+  SELECT
+    i.title AS incident,
+    m.metric,
+    m.value,
+    m.timestamp
+  FROM pagerduty.incidents i
+  JOIN datadog.metrics m
+    ON m.timestamp BETWEEN i.created_at - INTERVAL '15 minutes' AND i.created_at
+  WHERE i.urgency = 'high'
+    AND m.metric LIKE 'error%'
+  ORDER BY m.value DESC
+
+  4. Who deployed + who's on-call (accountability chain)
+  SELECT
+    pr.merged_by AS deployer,
+    oc.user_name AS on_call_engineer,
+    i.title AS incident
+  FROM pagerduty.incidents i
+  JOIN pagerduty.oncalls oc ON oc.escalation_level = 1
+  JOIN github.pull_requests pr
+    ON pr.merged_at BETWEEN i.created_at - INTERVAL '2 hours' AND i.created_at
+  WHERE i.urgency = 'high'
+
+  5. Full timeline reconstruction (the money query)
+  SELECT timestamp, source, event_type, description FROM (
+    SELECT created_at AS timestamp, 'PagerDuty' AS source, 'incident' AS event_type, title AS description
+    FROM pagerduty.incidents WHERE urgency = 'high'
+    UNION ALL
+    SELECT merged_at, 'GitHub', 'deploy', title FROM github.pull_requests WHERE merged_at > NOW() - INTERVAL '24 hours'
+    UNION ALL
+    SELECT started_at, 'StatusGator', 'outage', name FROM statusgator.incidents WHERE started_at > NOW() - INTERVAL '24 hours'
+  ) timeline
+  ORDER BY timestamp DESC
+
+  ---
+  What Separates Winners From Participants
+
+  ┌────────────────────────────┬────────────────────────────────────────────────┐
+  │     Just Participating     │                    Winning                     │
+  ├────────────────────────────┼────────────────────────────────────────────────┤
+  │ Run coral queries manually │ Claude agent runs them autonomously            │
+  ├────────────────────────────┼────────────────────────────────────────────────┤
+  │ Show raw SQL results       │ Auto-generate narrative incident summary       │
+  ├────────────────────────────┼────────────────────────────────────────────────┤
+  │ Query one source at a time │ Cross-source JOINs in single queries           │
+  ├────────────────────────────┼────────────────────────────────────────────────┤
+  │ CLI only                   │ Web UI showing incident timeline               │
+  ├────────────────────────────┼────────────────────────────────────────────────┤
+  │ Static queries             │ Agent asks clarifying questions, drills deeper │
+  └────────────────────────────┴────────────────────────────────────────────────┘
+
+  ---
+  Your Tech Stack Recommendation
+
+  Backend:  Python + Anthropic SDK (Claude Sonnet 4.6)
+            ↕ calls coral sql via subprocess
+  Frontend: Simple HTML/CSS or Streamlit (fast to build)
+  Agent:    Claude with tool_use — each coral sql is a "tool"
+
+  The agent pattern:
+  # Claude decides which coral query to run based on the incident
+  tools = [
+      {"name": "query_incidents", "description": "Get PagerDuty incidents"},
+      {"name": "find_deploys",    "description": "Find GitHub PRs near incident time"},
+      {"name": "check_metrics",   "description": "Get Datadog error metrics"},
+      {"name": "check_outages",   "description": "Check StatusGator third-party status"},
+  ]
+  # Claude chains these automatically to build the full picture
+
+  ---
+  Scoring the Judging Criteria
+
+  ┌───────────────────┬───────────────────────────────────────────────────────────────┐
+  │     Criteria      │                        How to nail it                         │
+  ├───────────────────┼───────────────────────────────────────────────────────────────┤
+  │ Potential Impact  │ Real-world: every company with on-call engineers needs this   │
+  ├───────────────────┼───────────────────────────────────────────────────────────────┤
+  │ Creativity        │ Cross-source JOINs (PD + GH + DD + SG in one query) = unique  │
+  ├───────────────────┼───────────────────────────────────────────────────────────────┤
+  │ Learning          │ Document your journey: "first-time Coral user" narrative      │
+  ├───────────────────┼───────────────────────────────────────────────────────────────┤
+  │ Technical         │ 3+ cross-source joins, agent autonomously chains queries      │
+  ├───────────────────┼───────────────────────────────────────────────────────────────┤
+  │ UX                │ Timeline UI showing incident → deploy → metric spike visually │
+  ├───────────────────┼───────────────────────────────────────────────────────────────┤
+  │ Best Use of Coral │ Use caching, cross-source joins, table functions — all 3      │
+  └───────────────────┴───────────────────────────────────────────────────────────────┘
+
+  ---
+  Immediate Next Steps (Today)
+
+  1. Register now — Early bird deadline is May 18 (3 days away)
+  2. Install Coral in WSL: curl -fsSL https://withcoral.com/install.sh | sh
+  3. Get API keys: PagerDuty, Datadog, GitHub token, StatusGator
+  4. Run the discovery queries to see your tables
+  5. Start with the timeline reconstruction query — it's the most impressive demo
+
+  Want me to scaffold the full project code structure right now?
+
+  Sources:
+  - Coral — Your agent's query language (https://withcoral.com/)
+  - GitHub - withcoral/coral (https://github.com/withcoral/coral)
+  - Pirates of the Coral-bean | WeMakeDevs (https://www.wemakedevs.org/hackathons/coral)
+
+✻ Sautéed for 3m 11s
+
+※ recap: Building an AI SRE Investigator with Coral SQL for the Pirates of the Coral-bean hackathon (May 25-31, Enterprise track). Install Coral next: run `curl -fsSL
+  https://withcoral.com/install.sh | sh` in WSL. (disable recaps in /config)
+
+> What if there is an agent which writes all these resolutions to a runbook/self improves itself? Any CRAZY Mindblowingly useful features I can give to outstand?
+
+● This is where you go from "cool demo" to "industry-changing product." Let me break down the features that will make judges' jaws drop.
+
+  ---
+  The Meta-Insight First
+
+  Most hackathon entries do: Query → Display
+
+  You do: Query → Reason → Act → Learn → Repeat
+
+  The self-improving runbook closes the loop. It's the difference between a dashboard and an intelligence that compounds.
+
+  ---
+  Feature 1: The Living Runbook (Your Core Differentiator)
+
+  Incident fires
+      │
+      ▼
+  Agent investigates (Coral cross-source queries)
+      │
+      ▼
+  Checks runbook: "Seen this before? Yes — Redis OOM, March 2024.
+                   @sarah fixed it in 11 mins with: kubectl rollout restart"
+      │
+      ▼
+  Engineer resolves it
+      │
+      ▼
+  Agent queries PagerDuty log_entries (what actions were actually taken)
+  + GitHub commits made during the incident window
+      │
+      ▼
+  Writes structured entry to runbook.jsonl
+      │
+      ▼
+  Runbook BECOMES a Coral source (local JSONL file)
+      │
+      ▼ (next incident)
+  Agent queries its own runbook via Coral SQL ← THIS IS THE MIND-BLOW
+
+  Why judges love this: You're using a Coral JSONL file as a source — the agent literally queries itself. Meta use of Coral's own capability.
+
+  # The runbook is just a file Coral can query
+  coral source add --file runbook.jsonl
+
+  # Agent queries it like any other source
+  coral sql "
+    SELECT resolution_steps, success_rate, avg_resolution_minutes
+    FROM runbook.entries
+    WHERE incident_fingerprint_similarity(current_incident) > 0.85
+    ORDER BY success_rate DESC
+    LIMIT 3
+  "
+
+  ---
+  Feature 2: Incident DNA Fingerprinting
+
+  Every incident has a signature — which metrics spiked, which service, what deploy happened. Store these fingerprints. Match new incidents against history.
+
+  Incident #4521 → {
+    "service": "payment-api",
+    "metrics_spiked": ["error.rate", "p99_latency"],
+    "deploy_happened": true,
+    "deploy_age_minutes": 23,
+    "external_outage": false
+  }
+
+  New incident comes in → Agent says:
+  "This matches 94% with incident #3891 (April 2024).
+   Root cause was: database connection pool exhaustion.
+   Fixed by: increasing max_connections + restarting pods.
+   Resolution time: 8 minutes."
+
+  -- Build the fingerprint database over time
+  SELECT
+    i.id,
+    i.service_name,
+    COUNT(DISTINCT m.metric) as metrics_spiked,
+    MAX(pr.merged_at) as last_deploy_before_incident,
+    TIMESTAMPDIFF(MINUTE, MAX(pr.merged_at), i.created_at) as deploy_age_minutes,
+    COUNT(si.id) as external_outages_at_time
+  FROM pagerduty.incidents i
+  LEFT JOIN datadog.metrics m ON m.timestamp BETWEEN i.created_at - INTERVAL '5 min' AND i.created_at
+  LEFT JOIN github.pull_requests pr ON pr.merged_at < i.created_at
+  LEFT JOIN statusgator.incidents si ON si.started_at BETWEEN i.created_at - INTERVAL '30 min' AND i.created_at
+  WHERE i.urgency = 'high'
+  GROUP BY i.id, i.service_name
+
+  ---
+  Feature 3: Pre-Deploy Blast Radius Scanner
+
+  Before a PR merges, agent says:
+
+  ▎ "⚠️ This PR touches payment-service. That service caused 7 P1 incidents in 90 days. Average resolution: 43 mins. Deploy on Friday? Risk score: 8.4/10."
+
+  Wire this as a GitHub Action — every PR gets an AI risk assessment powered by Coral.
+
+  SELECT
+    COUNT(i.id) as incident_count,
+    AVG(TIMESTAMPDIFF(MINUTE, i.created_at, i.resolved_at)) as avg_resolution_mins,
+    MAX(i.created_at) as last_incident,
+    STRING_AGG(DISTINCT i.title, ' | ') as recent_incident_titles
+  FROM pagerduty.incidents i
+  WHERE i.service_name = :service_name
+    AND i.created_at > NOW() - INTERVAL '90 days'
+    AND i.urgency = 'high'
+
+  ---
+  Feature 4: Silent Failure Hunter
+
+  Find incidents that should have fired but didn't. Ghost incidents.
+
+  -- Datadog shows error spike, but PagerDuty never fired
+  SELECT
+    m.timestamp,
+    m.metric,
+    m.value,
+    m.service_name,
+    COUNT(i.id) as pagerduty_incidents_fired
+  FROM datadog.metrics m
+  LEFT JOIN pagerduty.incidents i
+    ON i.service_name = m.service_name
+    AND i.created_at BETWEEN m.timestamp - INTERVAL '10 min' AND m.timestamp + INTERVAL '10 min'
+  WHERE m.metric = 'error.rate'
+    AND m.value > 0.05   -- 5% error rate
+    AND i.id IS NULL     -- but no PD incident!
+  ORDER BY m.value DESC
+
+  Output: "Your payment service had a 12% error rate for 22 minutes on May 12th. Nobody was paged."
+
+  ---
+  Feature 5: On-Call Burnout Detector
+
+  -- Who's getting destroyed by pages?
+  SELECT
+    u.name,
+    COUNT(i.id) as pages_this_month,
+    AVG(TIMESTAMPDIFF(MINUTE, i.created_at, i.resolved_at)) as avg_resolution_mins,
+    COUNT(CASE WHEN HOUR(i.created_at) BETWEEN 0 AND 6 THEN 1 END) as night_pages
+  FROM pagerduty.oncalls oc
+  JOIN pagerduty.users u ON u.id = oc.user_id
+  JOIN pagerduty.incidents i ON i.service_id = oc.service_id
+  WHERE i.created_at > NOW() - INTERVAL '30 days'
+  GROUP BY u.name
+  ORDER BY pages_this_month DESC
+
+  Output: "Sarah has been paged 47 times this month, 18 of them between midnight and 6am. She is a flight risk."
+
+  ---
+  Feature 6: Cascade Failure Predictor
+
+  -- If Service A is down, what else breaks? (from Datadog APM dependency data)
+  WITH affected_services AS (
+    SELECT DISTINCT downstream_service
+    FROM datadog.apm_dependencies
+    WHERE upstream_service = 'payment-api'
+  )
+  SELECT
+    a.downstream_service,
+    COUNT(i.id) as times_this_caused_incident,
+    MAX(i.created_at) as last_cascade_incident
+  FROM affected_services a
+  LEFT JOIN pagerduty.incidents i ON i.service_name = a.downstream_service
+  GROUP BY a.downstream_service
+  ORDER BY times_this_caused_incident DESC
+
+  ▎ "If payment-api goes down: checkout-service, order-service, fraud-detection will likely cascade. Historical cascade rate: 73%."
+
+  ---
+  Feature 7: Incident Cost Calculator
+
+  Turns pain into dollars. Executives love this.
+
+  SELECT
+    i.title,
+    TIMESTAMPDIFF(MINUTE, i.created_at, i.resolved_at) AS duration_minutes,
+    s.slo_target,
+    s.current_compliance,
+    -- Assume $50k/min for payment service during business hours
+    TIMESTAMPDIFF(MINUTE, i.created_at, i.resolved_at) * 50000 AS estimated_revenue_loss_usd
+  FROM pagerduty.incidents i
+  JOIN datadog.slos s ON s.service_name = i.service_name
+  WHERE i.created_at > NOW() - INTERVAL '30 days'
+  ORDER BY estimated_revenue_loss_usd DESC
+
+  ---
+  The Full Architecture That Wins
+
+  ┌─────────────────────────────────────────────────────┐
+  │                  AI SRE INVESTIGATOR                 │
+  ├─────────────────────────────────────────────────────┤
+  │                                                      │
+  │  [PagerDuty Webhook] ──► Incident Trigger            │
+  │           │                                          │
+  │           ▼                                          │
+  │  [Claude Agent] ← reads Living Runbook (Coral JSONL) │
+  │      │                                               │
+  │      ├── coral sql → PagerDuty (incident details)    │
+  │      ├── coral sql → GitHub (recent deploys, PRs)    │
+  │      ├── coral sql → Datadog (metrics, SLOs, APM)    │
+  │      ├── coral sql → StatusGator (third-party status)│
+  │      └── coral sql → Runbook (past similar incidents)│
+  │           │                                          │
+  │           ▼                                          │
+  │  Generates: Incident Summary + Root Cause + Fix      │
+  │           │                                          │
+  │           ▼                                          │
+  │  [Web UI Timeline] beautiful incident visualization  │
+  │           │                                          │
+  │           ▼ (post-resolution)                        │
+  │  Writes new entry to runbook.jsonl ← SELF-IMPROVES   │
+  │                                                      │
+  │  [GitHub Action] Pre-deploy risk scanner             │
+  └─────────────────────────────────────────────────────┘
+
+  ---
+  Priority Order to Build (7 days)
+
+  ┌────────────┬──────────────────────────────────────────────────────────────┐
+  │    Day     │                            Build                             │
+  ├────────────┼──────────────────────────────────────────────────────────────┤
+  │ 25 (Day 1) │ Coral setup + all 4 sources connected + basic incident query │
+  ├────────────┼──────────────────────────────────────────────────────────────┤
+  │ 26 (Day 2) │ Claude agent + cross-source JOIN queries + timeline view     │
+  ├────────────┼──────────────────────────────────────────────────────────────┤
+  │ 27 (Day 3) │ Living Runbook (JSONL source + write-back logic)             │
+  ├────────────┼──────────────────────────────────────────────────────────────┤
+  │ 28 (Day 4) │ Incident DNA fingerprinting + similarity matching            │
+  ├────────────┼──────────────────────────────────────────────────────────────┤
+  │ 29 (Day 5) │ Web UI — timeline visualization, cost calculator             │
+  ├────────────┼──────────────────────────────────────────────────────────────┤
+  │ 30 (Day 6) │ Pre-deploy GitHub Action + Silent Failure Hunter             │
+  ├────────────┼──────────────────────────────────────────────────────────────┤
+  │ 31 (Demo)  │ Polish + record demo video                                   │
+  └────────────┴──────────────────────────────────────────────────────────────┘
+
+  ---
+  Register before May 18 for the early bird prize. Want me to scaffold the full project structure and start with the agent + Coral integration code right now?
+
+✻ Cooked for 1m 14s
+
+> Do they give APIs for Datadog, pagerduty, dummy incidents? Or what will be the usual procedure?
+
+● Let me check the hackathon page for this and also look up sandbox/free tier options for each service.
+
+● Fetch(https://www.wemakedevs.org/hackathons/coral)
+  ⎿  Received 163.2KB (200 OK)
+
+● Fetch(https://docs.datadoghq.com/getting_started/)
+  ⎿  Received 12KB (200 OK)
+
+● Web Search("Datadog free trial developer account API key sandbox 2026")
+  ⎿  Did 1 search in 7s
+
+● Web Search("PagerDuty free developer account sandbox API key trial")
+  ⎿  Did 1 search in 5s
+
+● Web Search("StatusGator free account API key developer trial")
+  ⎿  Did 1 search in 6s
+
+● Web Search("PagerDuty populate dev account sample data terraform github")
+  ⎿  Did 1 search in 5s
+
+● Here's the complete picture — no, the hackathon does NOT provide API keys. You set up your own. But it's easier than it sounds.
+
+  ---
+  The Standard Procedure for Hackathons
+                                                                                                                                                                              ▎ You sign up for free trials / developer accounts on each service. They're all free for 14 days — more than enough for a 7-day hackathon.
+
+  ---
+  Each Service, Exactly What To Do
+
+  1. GitHub
+
+  Already free, you have it.
+  # Just create a Personal Access Token
+  GitHub → Settings → Developer Settings → Personal Access Tokens → Fine-grained
+  # Scopes needed: repo (read), pull_requests (read)
+  Cost: $0, forever
+
+  ---
+  2. PagerDuty — Free Developer Account
+
+  PagerDuty has an official free developer account (not just a trial — it's permanent for devs).
+
+  - Sign up at developer.pagerduty.com/sign-up (https://developer.pagerduty.com/sign-up/)
+  - Free tier: up to 3 users, full API access
+  - Get API key: Integrations → Developer Tools → API Access Keys → Create New API Key
+
+  The golden tool: PagerDuty has an official repo to populate your dev account with realistic fake incidents, services, escalation policies:
+  git clone https://github.com/PagerDuty-Samples/pd-populate-dev-account
+  # Terraform code that seeds your account with sample data
+  terraform apply
+  This gives you fake but realistic incidents, services, on-call schedules — perfect for demos.
+
+  Cost: $0
+
+  ---
+  3. Datadog — 14-day Free Trial
+
+  - Sign up at datadoghq.com/free-datadog-trial (https://www.datadoghq.com/free-datadog-trial/) — no credit card needed
+  - Get API key: Organization Settings → API Keys → New Key
+  - Get App key: Organization Settings → Application Keys → New Key
+
+  Seeding fake metrics for your demo:
+  # Datadog lets you submit custom metrics via API — seed fake error rate spikes
+  import datadog
+  datadog.initialize(api_key='xxx', app_key='yyy')
+  datadog.api.Metric.send(
+      metric='error.rate',
+      points=[(time.time(), 0.15)],  # 15% error rate spike
+      tags=['service:payment-api', 'env:prod']
+  )
+  You can script a whole fake incident timeline — error spikes at 2am, metric anomalies, etc.
+
+  Cost: $0 for 14 days (well past hackathon end)
+
+  ---
+  4. StatusGator — Free Plan with API
+
+  StatusGator opened their REST API to all plans including free.
+
+  - Sign up at statusgator.com (https://statusgator.com/) — free plan, no credit card
+  - API keys available immediately on free tier
+  - Even on free, you get real third-party service status data (AWS, GitHub, Stripe, etc.)
+
+  Cost: $0, permanently on free tier
+
+  ---
+  The Smart Demo Strategy
+
+  Here's what winning hackathon teams actually do — they don't rely on real production incidents. They script a realistic scenario:
+
+  Timeline you manufacture for the demo:
+  ─────────────────────────────────────────────────────
+   2:00 AM  GitHub: PR #342 merged to main (payment-service refactor)
+   2:23 AM  Datadog: error.rate spikes to 14% (you inject this via API)
+   2:25 AM  PagerDuty: P1 incident fires (you trigger this via API)
+   2:25 AM  StatusGator: Stripe API degraded (real or fake)
+   2:26 AM  YOUR AGENT: Wakes up, runs all coral queries, generates summary
+  ─────────────────────────────────────────────────────
+
+  This way your demo is:
+  - Deterministic — works every time, no flaky live data
+  - Dramatic — judges see the full story play out
+  - Controllable — you know exactly what the agent will find
+
+  ---
+  Setup Checklist (Do This Now)
+
+  [ ] GitHub token          → 5 minutes, already have account
+  [ ] PagerDuty dev account → developer.pagerduty.com/sign-up (10 min)
+  [ ] PagerDuty seed data   → github.com/PagerDuty-Samples/pd-populate-dev-account
+  [ ] Datadog trial         → datadoghq.com/free-datadog-trial (5 min)
+  [ ] StatusGator free      → statusgator.com (5 min)
+  [ ] Install Coral (WSL)   → curl -fsSL https://withcoral.com/install.sh | sh
+  [ ] coral source add each → ~15 min total
+
+  Total setup time: ~45 minutes. Do it this weekend, so you enter the hackathon (May 25) already unblocked.
+
+  ---
+  One More Pro Tip
+
+  For the demo video (judges watch this), script the incident scenario above and show the agent go from "PagerDuty fires" to "root cause identified + runbook entry written"
+   in under 60 seconds. That's your money shot.
+
+  Want me to write the seed scripts that inject fake incidents into Datadog and PagerDuty to build your demo scenario?
+
+  Sources:
+  - PagerDuty Developer Account (https://developer.pagerduty.com/docs/developer-account)
+  - pd-populate-dev-account (https://github.com/PagerDuty-Samples/pd-populate-dev-account)
+  - Datadog Free Trial (https://www.datadoghq.com/free-datadog-trial/)
+  - StatusGator API for all plans (https://statusgator.com/blog/status-data-api-now-available-to-all/)
