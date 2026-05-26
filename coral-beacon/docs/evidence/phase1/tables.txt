@@ -1,0 +1,14 @@
++-------------+--------+
+| schema_name | tables |
++-------------+--------+
+| datadog     | 10     |
+| github      | 362    |
+| pagerduty   | 112    |
+| statusgator | 12     |
++-------------+--------+
+Source       Version  Origin
+-----------  -------  -------
+datadog      2.1.0    bundled
+github       1.1.6    bundled
+pagerduty    2.0.0    bundled
+statusgator  1.0.0    bundled
