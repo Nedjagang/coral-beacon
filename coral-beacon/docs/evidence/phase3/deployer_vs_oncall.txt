@@ -1,0 +1,24 @@
++----------------------+---------------------------+----------------------+----------------------+------------------------+----------------------+-------------+
+| oncall_engineer      | escalation_policy         | shift_start          | shift_end            | active_repo            | repo_last_updated    | open_issues |
++----------------------+---------------------------+----------------------+----------------------+------------------------+----------------------+-------------+
+| Christina W. McCarty | Escalation Policy to Fred | 2026-05-26T09:28:52Z | 2026-09-08T09:34:37Z | Nedjagang/coral-beacon | 2026-05-26T10:19:03Z | 0           |
+| Praneeth V P         | Default                   |                      |                      | Nedjagang/coral-beacon | 2026-05-26T10:19:03Z | 0           |
+| Tracy D. Delagarza   | IT Mainframe Policy       | 2026-05-26T09:28:52Z | 2026-05-30T00:00:00Z | Nedjagang/coral-beacon | 2026-05-26T10:19:03Z | 0           |
+| Tracy D. Delagarza   | IT Web Policy             | 2026-05-26T09:28:52Z | 2026-05-30T00:00:00Z | Nedjagang/coral-beacon | 2026-05-26T10:19:03Z | 0           |
+| Tracy D. Delagarza   | IT Core Policy            | 2026-05-26T09:28:52Z | 2026-05-30T00:00:00Z | Nedjagang/coral-beacon | 2026-05-26T10:19:03Z | 0           |
+| Tracy D. Delagarza   | IT CRM Policy             | 2026-05-26T09:28:52Z | 2026-05-30T00:00:00Z | Nedjagang/coral-beacon | 2026-05-26T10:19:03Z | 0           |
+| Christina W. McCarty | Escalation Policy to Fred | 2026-05-26T09:28:52Z | 2026-09-08T09:34:37Z | Nedjagang/oneuptime    | 2026-05-17T19:49:47Z | 0           |
+| Praneeth V P         | Default                   |                      |                      | Nedjagang/oneuptime    | 2026-05-17T19:49:47Z | 0           |
+| Tracy D. Delagarza   | IT Core Policy            | 2026-05-26T09:28:52Z | 2026-05-30T00:00:00Z | Nedjagang/oneuptime    | 2026-05-17T19:49:47Z | 0           |
+| Tracy D. Delagarza   | IT Mainframe Policy       | 2026-05-26T09:28:52Z | 2026-05-30T00:00:00Z | Nedjagang/oneuptime    | 2026-05-17T19:49:47Z | 0           |
+| Tracy D. Delagarza   | IT CRM Policy             | 2026-05-26T09:28:52Z | 2026-05-30T00:00:00Z | Nedjagang/oneuptime    | 2026-05-17T19:49:47Z | 0           |
+| Tracy D. Delagarza   | IT Web Policy             | 2026-05-26T09:28:52Z | 2026-05-30T00:00:00Z | Nedjagang/oneuptime    | 2026-05-17T19:49:47Z | 0           |
+| Christina W. McCarty | Escalation Policy to Fred | 2026-05-26T09:28:52Z | 2026-09-08T09:34:37Z | Nedjagang/OpenSRE      | 2026-05-05T20:42:15Z | 0           |
+| Praneeth V P         | Default                   |                      |                      | Nedjagang/OpenSRE      | 2026-05-05T20:42:15Z | 0           |
+| Tracy D. Delagarza   | IT CRM Policy             | 2026-05-26T09:28:52Z | 2026-05-30T00:00:00Z | Nedjagang/OpenSRE      | 2026-05-05T20:42:15Z | 0           |
+| Tracy D. Delagarza   | IT Mainframe Policy       | 2026-05-26T09:28:52Z | 2026-05-30T00:00:00Z | Nedjagang/OpenSRE      | 2026-05-05T20:42:15Z | 0           |
+| Tracy D. Delagarza   | IT Core Policy            | 2026-05-26T09:28:52Z | 2026-05-30T00:00:00Z | Nedjagang/OpenSRE      | 2026-05-05T20:42:15Z | 0           |
+| Tracy D. Delagarza   | IT Web Policy             | 2026-05-26T09:28:52Z | 2026-05-30T00:00:00Z | Nedjagang/OpenSRE      | 2026-05-05T20:42:15Z | 0           |
+| Christina W. McCarty | Escalation Policy to Fred | 2026-05-26T09:28:52Z | 2026-09-08T09:34:37Z | Nedjagang/ivy          | 2026-04-24T14:15:30Z | 0           |
+| Praneeth V P         | Default                   |                      |                      | Nedjagang/ivy          | 2026-04-24T14:15:30Z | 0           |
++----------------------+---------------------------+----------------------+----------------------+------------------------+----------------------+-------------+
