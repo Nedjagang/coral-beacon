@@ -6,6 +6,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from agent.coral_client import coral_sql, coral_sql_file
+from agent.investigator import investigate
 
 load_dotenv()
 
@@ -39,8 +40,11 @@ def run_query(body: SqlRequest):
     return _run(lambda: coral_sql(body.sql))
 
 
-@app.get("/investigate/deploys")
-def investigate_deploys():
-    return _run(
-        lambda: coral_sql_file(str(QUERIES_DIR / "incidents_with_deploys.sql"))
-    )
+@app.get("/investigate/{incident_id}")
+def investigate_incident(incident_id: str):
+    try:
+        return investigate(incident_id)
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=e.stderr) from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
