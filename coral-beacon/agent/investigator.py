@@ -12,7 +12,16 @@ from agent.coral_client import coral_sql
 
 load_dotenv()
 
-MODEL = "claude-sonnet-4-6"
+# LLM_MODE controls which backend is used:
+#   "mock"   — instant canned response, zero API calls (local dev / UI wiring)
+#   "haiku"  — claude-haiku-4-5, cheapest real model (~$0.05/run)
+#   "sonnet" — claude-sonnet-4-6, default for demos and submission (default)
+LLM_MODE = os.getenv("LLM_MODE", "haiku")
+
+_MODELS = {
+    "haiku": "claude-haiku-4-5",
+    "sonnet": "claude-sonnet-4-6",
+}
 
 SYSTEM_PROMPT = """You are Coral Beacon, an expert Site Reliability Engineer AI.
 
@@ -86,6 +95,39 @@ TOOLS: list[dict[str, Any]] = [
     },
 ]
 
+_MOCK_POSTMORTEM = """\
+## Incident Summary
+| Field | Value |
+|---|---|
+| **Incident ID** | `{incident_id}` |
+| **Mode** | MOCK (set LLM_MODE=haiku or LLM_MODE=sonnet for a real run) |
+| **Status** | Simulated — no API call made |
+
+## Timeline
+| Time (UTC) | Source | Event |
+|---|---|---|
+| 09:59:09 | PagerDuty | Incident triggered — Web service 5xx error rate at 12% |
+| 09:59:39 | PagerDuty | Responder notified by email |
+| 10:01:00 | Datadog | Two monitors enter No Data state (system.load, disk latency) |
+| 10:15:00 | GitHub | Hotfix PR #42 merged by on-call engineer |
+| 10:22:00 | PagerDuty | Incident resolved |
+
+## Root Cause Analysis
+Deployment of PR #41 introduced a misconfigured connection pool size that exhausted
+database connections under moderate load, causing upstream 5xx errors.
+
+## Impact
+- 12% of web service requests returned HTTP 500 for ~23 minutes
+- Estimated 4 200 failed requests
+
+## Resolution
+Reverted connection pool config via PR #42 hotfix. Service recovered within 2 minutes of deploy.
+
+## Action Items
+- [ ] Add connection pool exhaustion alert to Datadog
+- [ ] Add pre-deploy load test to CI for connection pool scenarios
+"""
+
 
 def _execute_tool(name: str, tool_input: dict[str, Any]) -> str:
     try:
@@ -109,8 +151,29 @@ def _execute_tool(name: str, tool_input: dict[str, Any]) -> str:
         return f"Tool error: {e}"
 
 
-def investigate(incident_id: str) -> dict[str, Any]:
-    """Run the agentic loop for a given incident ID and return the postmortem."""
+def _mock_investigate(incident_id: str) -> dict[str, Any]:
+    """Return a canned postmortem instantly — no API call, no cost."""
+    return {
+        "incident_id": incident_id,
+        "mode": "mock",
+        "postmortem": _MOCK_POSTMORTEM.format(incident_id=incident_id),
+        "tool_calls": [],
+        "turns": 0,
+        "usage": {"input_tokens": 0, "output_tokens": 0, "cache_read_tokens": 0, "cache_creation_tokens": 0},
+    }
+
+
+def investigate(incident_id: str, mode: str | None = None) -> dict[str, Any]:
+    """Run the agentic loop for a given incident ID and return the postmortem.
+
+    mode overrides the LLM_MODE env var: 'mock' | 'haiku' | 'sonnet'
+    """
+    effective_mode = mode or LLM_MODE
+
+    if effective_mode == "mock":
+        return _mock_investigate(incident_id)
+
+    model = _MODELS.get(effective_mode, _MODELS["sonnet"])
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
     messages: list[dict[str, Any]] = [
@@ -133,7 +196,7 @@ def investigate(incident_id: str) -> dict[str, Any]:
         for attempt in range(4):
             try:
                 response = client.messages.create(
-                    model=MODEL,
+                    model=model,
                     max_tokens=4096,
                     system=[
                         {
@@ -155,7 +218,6 @@ def investigate(incident_id: str) -> dict[str, Any]:
         messages.append({"role": "assistant", "content": response.content})
 
         if response.stop_reason == "end_turn":
-            # Extract the final text narrative
             for block in response.content:
                 if hasattr(block, "text"):
                     final_narrative = block.text
@@ -190,6 +252,7 @@ def investigate(incident_id: str) -> dict[str, Any]:
 
     return {
         "incident_id": incident_id,
+        "mode": effective_mode,
         "postmortem": final_narrative,
         "tool_calls": tool_calls_made,
         "turns": turn,

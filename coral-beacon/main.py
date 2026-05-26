@@ -41,9 +41,10 @@ def run_query(body: SqlRequest):
 
 
 @app.get("/investigate/{incident_id}")
-def investigate_incident(incident_id: str):
+def investigate_incident(incident_id: str, mode: str | None = None):
+    """mode query param: mock | haiku | sonnet  (overrides LLM_MODE env var)"""
     try:
-        return investigate(incident_id)
+        return investigate(incident_id, mode=mode)
     except subprocess.CalledProcessError as e:
         raise HTTPException(status_code=500, detail=e.stderr) from e
     except Exception as e:
