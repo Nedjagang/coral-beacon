@@ -10,7 +10,7 @@ Install the [Coral CLI](https://withcoral.com/docs/getting-started/installation)
 
 ```bash
 cd coral-beacon   # from your repo root
-
+    
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -28,3 +28,16 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Open http://localhost:8000/health
+
+## GitHub
+
+Remote: https://github.com/Nedjagang/coral-beacon
+
+```bash
+# one-time auth (from repo root ~/coral)
+export PATH="$HOME/.local/bin:$PATH"
+gh auth login
+
+# push
+git push -u origin main
+```
