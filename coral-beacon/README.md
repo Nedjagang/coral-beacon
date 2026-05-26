@@ -4,9 +4,12 @@ AI SRE investigator for the Coral hackathon — correlates PagerDuty, Datadog, G
 
 ## WSL setup
 
+Use either workspace path (`/home/ubuntu/coral/coral-beacon` in Cursor WSL, or `/mnt/d/Praneeth/coral/coral-beacon` on D:).
+
+Install the [Coral CLI](https://withcoral.com/docs/getting-started/installation) (Linux: download `coral-x86_64-unknown-linux-gnu.tar.gz` from GitHub releases into `~/.local/bin`).
+
 ```bash
-ls /mnt/d/Praneeth/coral/coral-beacon
-cd /mnt/d/Praneeth/coral/coral-beacon
+cd coral-beacon   # from your repo root
 
 python3 -m venv .venv
 source .venv/bin/activate
