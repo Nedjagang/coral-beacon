@@ -3,6 +3,14 @@ import subprocess
 
 
 def coral_sql(sql: str) -> str:
+    """Execute SQL via subprocess (default) or MCP, depending on CORAL_TRANSPORT env var."""
+    if os.getenv("CORAL_TRANSPORT", "subprocess").lower() == "mcp":
+        from agent.coral_mcp_client import coral_sql_mcp
+        return coral_sql_mcp(sql)
+    return _coral_sql_subprocess(sql)
+
+
+def _coral_sql_subprocess(sql: str) -> str:
     env = os.environ.copy()
     env["CORAL_CONFIG_DIR"] = os.getenv(
         "CORAL_CONFIG_DIR", os.path.expanduser("~/coral-hackathon")

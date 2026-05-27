@@ -1,0 +1,13 @@
+{
+  "transport": "mcp",
+  "queries": [
+    {
+      "query": "SELECT id, title FROM pagerduty.incidents LIMIT 2",
+      "result": "{\n  \"rows\": [\n    {\n      \"id\": \"Q0N1959UVLQO6J\",\n      \"title\": \"Mainframe high CPU utilization - 98%\"\n    },\n    {\n      \"id\": \"Q1V0ONO3CNQSMD\",\n      \"title\": \"CRM database connection pool exhausted\"\n    }\n  ]\n}"
+    },
+    {
+      "query": "SELECT id, merged_at FROM github.pulls WHERE owner='Nedjagang' AND repo='coral-beacon-demo' LIMIT 2",
+      "result": "{\n  \"rows\": [\n    {\n      \"id\": 3753764542,\n      \"merged_at\": \"2026-05-27T08:29:36Z\"\n    }\n  ]\n}"
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -79,8 +80,10 @@ def get_runbook():
 
 
 @app.get("/investigate/{incident_id}")
-def investigate_incident(incident_id: str, mode: str | None = None):
-    """mode query param: mock | haiku | sonnet  (overrides LLM_MODE env var)"""
+def investigate_incident(incident_id: str, mode: str | None = None, transport: str | None = None):
+    """mode: mock|haiku|sonnet  transport: subprocess|mcp  (both override env vars)"""
+    if transport:
+        os.environ["CORAL_TRANSPORT"] = transport
     try:
         result = investigate(incident_id, mode=mode)
         # Persist latest result for the UI
