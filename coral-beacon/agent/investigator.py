@@ -1,4 +1,4 @@
-"""Phase 2 — Claude tool_use agent that autonomously chains Coral SQL queries to produce incident postmortems."""
+"""Phase 4 — Claude tool_use agent with Living Runbook: reads past incidents from runbook.entries, writes new ones."""
 
 import json
 import os
@@ -9,6 +9,7 @@ import anthropic
 from dotenv import load_dotenv
 
 from agent.coral_client import coral_sql
+from agent.runbook import append_runbook_entry
 
 load_dotenv()
 
@@ -25,28 +26,60 @@ _MODELS = {
 
 SYSTEM_PROMPT = """You are Coral Beacon, an expert Site Reliability Engineer AI.
 
-Your job is to investigate incidents autonomously by querying live operational data across
-PagerDuty (incidents, oncalls, escalations), GitHub (pull requests, deployments, commits),
-Datadog (metrics, monitors, SLOs), and StatusGator (third-party service statuses).
+Investigate the given PagerDuty incident by running Coral SQL queries, then write a postmortem.
 
-You have access to Coral SQL — a query engine that JOINs across all these sources using SQL.
-Always prefer a single cross-source JOIN over multiple separate queries.
+## Available Coral schemas and key tables
 
-Investigation approach:
-1. Start by identifying what the incident is — use coral_list_tables or coral_describe_table if unsure of schema.
-2. Pull the incident timeline: when did it start, what service, who was on-call.
-3. Correlate with deploys: was a PR merged near the incident start time?
-4. Check Datadog: did error rates or latency spike? Do metrics confirm the blast radius?
-5. Check StatusGator: was a third-party dependency down at the same time?
-6. Synthesize a concise postmortem narrative: timeline, probable root cause, responders, resolution.
+pagerduty:
+  incidents  — id, title, status, urgency, created_at, service__id, service__name
+  oncalls    — user__id, user__summary, escalation_level, escalation_policy__summary, start, end
+  log_entries — id, type, summary, created_at, incident__id, agent__summary
 
-Write the final postmortem in this structure:
-## Incident Summary
-## Timeline
-## Root Cause Analysis
-## Impact
-## Resolution
-## Action Items"""
+datadog:
+  monitors   — id, name, type, status, query, tags, created, modified
+
+statusgator:
+  boards     — id, name  (use board_id = 'g1t0HJdmfr' for all statusgator table filters)
+  monitors   — board_id, id, display_name, monitor_type, filtered_status, unfiltered_status
+  incidents  — board_id, id, name, phase, severity, started_at, resolved_at
+
+github:
+  pulls      — owner, repo, number, title, merged_at, user__login, state, html_url
+               (requires: WHERE owner = 'Nedjagang' AND repo = '<repo-name>')
+  user_repos — full_name, description, open_issues_count, updated_at
+
+runbook:
+  entries    — id, created_at, service, service_id, summary, root_cause,
+               resolution_steps, resolution_minutes, fingerprint
+
+## Mandatory investigation steps (do them in order, skip none)
+
+Step 1 — Query the runbook first. Find similar past incidents:
+  SELECT * FROM runbook.entries
+  WHERE service_id = '<service_id>' OR service LIKE '%<keyword>%'
+  ORDER BY created_at DESC LIMIT 5
+
+Step 2 — Get incident details:
+  SELECT id, title, status, urgency, created_at, service__id FROM pagerduty.incidents
+  WHERE id = '<incident_id>'
+
+Step 3 — Get on-call responders:
+  SELECT user__summary, escalation_policy__summary, start FROM pagerduty.oncalls
+  WHERE escalation_level = 1
+
+Step 4 — Check Datadog for unhealthy monitors:
+  SELECT id, name, status FROM datadog.monitors WHERE status != 'OK'
+
+Step 5 — Check StatusGator third-party status:
+  SELECT display_name, filtered_status FROM statusgator.monitors WHERE board_id = 'g1t0HJdmfr'
+
+Step 6 — Write the postmortem narrative with sections:
+  ## Incident Summary | ## Similar Past Incidents | ## Timeline |
+  ## Root Cause Analysis | ## Impact | ## Resolution | ## Action Items
+
+Step 7 — Call record_runbook_entry to save the postmortem. This is mandatory.
+
+Keep queries targeted. Do not describe tables you already know from this prompt."""
 
 # Tool definitions — cache_control on last tool caches both the tool list and the system prompt
 TOOLS: list[dict[str, Any]] = [
@@ -81,7 +114,7 @@ TOOLS: list[dict[str, Any]] = [
             "properties": {
                 "schema": {
                     "type": "string",
-                    "description": "The source schema name (e.g. 'pagerduty', 'github', 'datadog', 'statusgator').",
+                    "description": "The source schema name (e.g. 'pagerduty', 'github', 'datadog', 'statusgator', 'runbook').",
                 },
                 "table": {
                     "type": "string",
@@ -90,7 +123,39 @@ TOOLS: list[dict[str, Any]] = [
             },
             "required": ["schema", "table"],
         },
-        # Caching here covers both the full tool list and the system prompt
+    },
+    {
+        "name": "query_runbook",
+        "description": "Query the Living Runbook — a Coral source of past incident postmortems written by this agent. Always call this at the start of every investigation to find similar past incidents.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "sql": {
+                    "type": "string",
+                    "description": "A SQL query against runbook.entries. Columns: id, created_at, service, service_id, summary, root_cause, resolution_steps, resolution_minutes, fingerprint.",
+                }
+            },
+            "required": ["sql"],
+        },
+    },
+    {
+        "name": "record_runbook_entry",
+        "description": "Persist a completed postmortem to the Living Runbook so future investigations can learn from it. Call this at the end of every investigation.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "incident_id":       {"type": "string", "description": "PagerDuty incident ID."},
+                "service":           {"type": "string", "description": "Human-readable service name."},
+                "service_id":        {"type": "string", "description": "PagerDuty service ID."},
+                "summary":           {"type": "string", "description": "One-sentence description of what happened."},
+                "root_cause":        {"type": "string", "description": "Root cause explanation."},
+                "resolution_steps":  {"type": "string", "description": "Numbered steps taken to resolve."},
+                "resolution_minutes":{"type": "integer","description": "Total time to resolve in minutes."},
+                "fingerprint":       {"type": "object", "description": "JSON object with error_type, trigger, symptom keys for future matching."},
+            },
+            "required": ["incident_id", "service", "service_id", "summary", "root_cause", "resolution_steps", "resolution_minutes", "fingerprint"],
+        },
+        # Cache control here covers the full tool list + system prompt
         "cache_control": {"type": "ephemeral"},
     },
 ]
@@ -145,6 +210,11 @@ def _execute_tool(name: str, tool_input: dict[str, Any]) -> str:
                 f"WHERE schema_name = '{schema}' AND table_name = '{table}' "
                 f"ORDER BY ordinal_position"
             )
+        elif name == "query_runbook":
+            return coral_sql(tool_input["sql"])
+        elif name == "record_runbook_entry":
+            entry_id = append_runbook_entry(tool_input)
+            return f"Runbook entry {entry_id} recorded successfully."
         else:
             return f"Unknown tool: {name}"
     except Exception as e:
@@ -246,8 +316,8 @@ def investigate(incident_id: str, mode: str | None = None) -> dict[str, Any]:
 
         messages.append({"role": "user", "content": tool_results})
 
-        # Safety cap — the agent should never need more than 20 turns
-        if turn >= 20:
+        # Safety cap
+        if turn >= 30:
             break
 
     return {

@@ -1,0 +1,31 @@
+name: runbook
+version: 0.1.0
+dsl_version: 3
+backend: jsonl
+test_queries:
+  - SELECT * FROM runbook.entries LIMIT 1
+tables:
+  - name: entries
+    description: Living Runbook — past incident postmortems written by the Coral Beacon agent
+    source:
+      location: file:///home/ubuntu/coral/coral-beacon/data/
+      glob: "runbook.jsonl"
+    columns:
+      - name: id
+        type: Utf8
+      - name: created_at
+        type: Utf8
+      - name: service
+        type: Utf8
+      - name: service_id
+        type: Utf8
+      - name: summary
+        type: Utf8
+      - name: root_cause
+        type: Utf8
+      - name: resolution_steps
+        type: Utf8
+      - name: resolution_minutes
+        type: Int64
+      - name: fingerprint
+        type: Utf8

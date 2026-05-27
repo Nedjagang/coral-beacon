@@ -1,0 +1,7 @@
++-------------+--------------+--------------------------------------------------------------------------------------------+--------------------+
+| id          | service      | summary                                                                                    | resolution_minutes |
++-------------+--------------+--------------------------------------------------------------------------------------------+--------------------+
+| rb-0001     | web-service  | Web service 5xx error rate spiked to 14% for 18 minutes                                    | 22                 |
+| rb-0002     | crm-database | CRM database connection pool exhausted for 31 minutes during business hours                | 31                 |
+| rb-36c7892f | Web          | Web service 5xx error rate spiked to 12% for 240 minutes due to connection pool exhaustion | 240                |
++-------------+--------------+--------------------------------------------------------------------------------------------+--------------------+
