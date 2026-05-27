@@ -1,0 +1,31 @@
+
+◈ CORAL BEACON — Demo Seed Script
+  Seeding: GitHub PR → Datadog spike → PagerDuty incident
+
+
+── GitHub ──────────────────────────────────────────
+   PR already merged: #1 at 2026-05-27T08:29:36Z
+
+── Datadog ─────────────────────────────────────────
+   Metric submitted: web.error.rate — 6 points, peak=0.14
+
+── PagerDuty ───────────────────────────────────────
+   Incident created: Q3J0N7R8W8D8EA
+     Title:   Web service error rate spike 14% — deploy PR #1
+     Status:  triggered | Urgency: high
+
+✅  Demo scenario ready
+────────────────────────────────────────────────
+   GitHub PR:        #1 merged in Nedjagang/coral-beacon-demo
+   PR merged at:     2026-05-27T08:29:36Z
+   Datadog metric:   web.error.rate peaked at 0.14
+   PagerDuty:        Q3J0N7R8W8D8EA
+────────────────────────────────────────────────
+   Investigate (haiku, cheap):
+     curl "http://localhost:8000/investigate/Q3J0N7R8W8D8EA?mode=haiku"
+
+   Investigate (sonnet, demo quality):
+     curl "http://localhost:8000/investigate/Q3J0N7R8W8D8EA?mode=sonnet"
+
+   Web UI:  http://localhost:8000
+
