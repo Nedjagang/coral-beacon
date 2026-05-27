@@ -1,0 +1,27 @@
+version = 1
+
+[workspaces.default.sources.datadog]
+variables = { DD_SITE = "us5.datadoghq.com" }
+secrets = ["DD_API_KEY", "DD_APPLICATION_KEY"]
+origin = "bundled"
+
+[workspaces.default.sources.github]
+variables = { GITHUB_API_BASE = "https://api.github.com" }
+secrets = ["GITHUB_TOKEN"]
+origin = "bundled"
+
+[workspaces.default.sources.pagerduty]
+variables = {}
+secrets = ["PAGERDUTY_API_TOKEN"]
+origin = "bundled"
+
+[workspaces.default.sources.runbook]
+version = "0.1.0"
+variables = {}
+secrets = []
+origin = "imported"
+
+[workspaces.default.sources.statusgator]
+variables = {}
+secrets = ["STATUSGATOR_API_TOKEN"]
+origin = "bundled"
