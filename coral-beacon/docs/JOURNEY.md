@@ -27,3 +27,22 @@
 - What's the simplest deployment target that runs both FastAPI *and* a Coral binary? (Railway buildpacks vs Fly machines.)
 
 **Tomorrow (Day 3):** Phase 1 — install Coral, wire 4 sources, prove discovery query. Then immediately begin Phase 2.
+
+## 2026-05-27 — Day 3: Phases 2–7 complete, demo pipeline live
+
+**What I learned about Coral today:**
+
+- **Custom source `backend` must be `jsonl`, not `file`.** The YAML spec has `backend: jsonl` for JSONL files; `backend: file` is invalid. The Living Runbook custom source registers and queries fine once this is corrected.
+- **Coral CLI parses `--` as a flag prefix.** Any SQL string starting with a `--` comment line causes `coral sql` to throw a parse error. Fix: strip comment lines before passing SQL to the subprocess. Same issue doesn't exist in the MCP transport (JSON field, not CLI arg).
+- **`github.pulls` requires constant `owner` + `repo` filters.** Cross-source JOIN with `pagerduty.incidents` works only after seeding a real repo (`Nedjagang/coral-beacon-demo`) so the constants can be embedded. Zero rows before that; live cross-source join after.
+- **UNION ALL across different schemas hits an Arrow buffer bug in v0.3.0.** Workaround: `full_timeline.sql` uses same-source UNION ALL (both tables from `pagerduty`). The cross-source JOINs (CROSS JOIN with `datadog`, `statusgator`, `github`) all work correctly.
+- **MCP transport (`coral mcp-stdio`) returns JSON rows, not ASCII tables.** The subprocess transport returns an ASCII table; the MCP endpoint returns `{"rows": [...]}` JSON. Both are useful for Claude — JSON is actually cleaner for the LLM. `coral.tables` metadata returns fewer schemas than the subprocess, but direct table queries (e.g. `pagerduty.incidents`) work fine over MCP.
+- **`GITHUB_TOKEN` env var shadows the gh credential helper for git pushes.** When `.env` sets `GITHUB_TOKEN` to a read-only fine-grained PAT, `gh auth git-credential` returns that PAT for git push — which is rejected. Fix: strip `GITHUB_TOKEN` from the subprocess env for all git operations so the stored gh CLI token (`gho_***`) is used.
+
+**What surprised me:**
+- The PagerDuty → GitHub cross-source JOIN (`incidents_with_deploys.sql`) confirmed that Coral does the HTTP fanout transparently: one SQL statement, two live API calls, one joined result. No Python glue needed.
+- Prompt caching on the tool list works very well — Haiku went from 20+ exploration turns to 7 after I pre-loaded schema info in the system prompt.
+
+**Phases completed today:** 2 (agent loop), 3 (5 cross-source queries), 4 (Living Runbook), 5 (Web UI), 6 (seed script), 7 (MCP transport).
+
+**Tomorrow (Day 4):** Phase 8 — deploy to Railway/Fly, security review, polish README, record demo, submit.
