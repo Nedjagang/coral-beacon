@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coral Beacon — AI SRE Investigator</title>
+  <style>
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --border:    #30363d;
+      --muted:     #8b949e;
+      --text:      #e6edf3;
+      --green:     #3fb950;
+      --red:       #f85149;
+      --yellow:    #d29922;
+      --blue:      #58a6ff;
+      --purple:    #bc8cff;
+      --orange:    #ffa657;
+      --coral:     #f0734a;
+      --mono:      'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Top bar ── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .logo {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--coral);
+      letter-spacing: 0.05em;
+    }
+    .logo span { color: var(--muted); font-weight: 400; }
+    .badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      border: 1px solid;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+    .badge-red    { color: var(--red);    border-color: var(--red);    background: #f8514918; }
+    .badge-green  { color: var(--green);  border-color: var(--green);  background: #3fb95018; }
+    .badge-yellow { color: var(--yellow); border-color: var(--yellow); background: #d2992218; }
+    .badge-blue   { color: var(--blue);   border-color: var(--blue);   background: #58a6ff18; }
+    .badge-muted  { color: var(--muted);  border-color: var(--border); }
+    header .spacer { flex: 1; }
+    .run-btn {
+      background: var(--coral);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 16px;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.03em;
+    }
+    .run-btn:hover { opacity: 0.85; }
+    .run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── Incident hero ── */
+    .hero {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .hero-id   { color: var(--muted); font-size: 11px; margin-bottom: 4px; }
+    .hero-title { font-size: 18px; font-weight: 700; color: var(--text); }
+    .hero-meta  {
+      display: flex; gap: 16px; margin-top: 10px;
+      color: var(--muted); font-size: 11px; flex-wrap: wrap;
+    }
+    .hero-meta span { display: flex; align-items: center; gap: 4px; }
+
+    /* ── Main grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      grid-template-rows: 1fr auto;
+      gap: 0;
+      height: calc(100vh - 125px);
+    }
+
+    /* ── Left panel: timeline ── */
+    .panel-left {
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .panel-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      padding: 12px 16px 8px;
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 1;
+    }
+    .timeline { padding: 12px 0; flex: 1; }
+    .tl-item {
+      display: flex;
+      gap: 12px;
+      padding: 6px 16px;
+      position: relative;
+    }
+    .tl-item::before {
+      content: '';
+      position: absolute;
+      left: 26px;
+      top: 26px;
+      bottom: -6px;
+      width: 1px;
+      background: var(--border);
+    }
+    .tl-item:last-child::before { display: none; }
+    .tl-dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      flex-shrink: 0;
+      margin-top: 2px;
+      z-index: 1;
+    }
+    .tl-dot.pd { border-color: var(--red);    color: var(--red); }
+    .tl-dot.dd { border-color: var(--purple); color: var(--purple); }
+    .tl-dot.sg { border-color: var(--blue);   color: var(--blue); }
+    .tl-dot.gh { border-color: var(--green);  color: var(--green); }
+    .tl-dot.rb { border-color: var(--coral);  color: var(--coral); }
+    .tl-body { flex: 1; min-width: 0; }
+    .tl-source { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; }
+    .tl-desc { font-size: 12px; color: var(--text); word-break: break-word; }
+    .tl-time { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Right panel: narrative ── */
+    .panel-right {
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .narrative {
+      padding: 20px 28px;
+      flex: 1;
+      white-space: pre-wrap;
+      font-size: 13px;
+      line-height: 1.8;
+      color: var(--text);
+    }
+    .narrative h2 {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--coral);
+      margin: 20px 0 8px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 4px;
+    }
+    .narrative h2:first-child { margin-top: 0; }
+    .narrative table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+    .narrative th, .narrative td {
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      text-align: left;
+      font-size: 12px;
+    }
+    .narrative th { background: var(--surface); color: var(--muted); font-weight: 600; }
+    .narrative code { background: var(--surface); border-radius: 3px; padding: 1px 5px; color: var(--orange); }
+    .narrative strong { color: var(--text); font-weight: 700; }
+    .narrative li { margin-left: 18px; margin-bottom: 3px; }
+
+    /* ── Bottom runbook panel ── */
+    .runbook-panel {
+      grid-column: 1 / -1;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .runbook-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .runbook-table th {
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 8px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+    }
+    .runbook-table td {
+      padding: 7px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text);
+      vertical-align: top;
+    }
+    .runbook-table tr:last-child td { border-bottom: none; }
+    .runbook-table tr:hover td { background: #ffffff08; }
+    .runbook-id { color: var(--coral); }
+    .runbook-time { color: var(--blue); }
+    .runbook-mins { color: var(--yellow); }
+    .runbook-summary { color: var(--muted); max-width: 480px; }
+
+    /* ── Loading / empty states ── */
+    .empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--muted);
+      gap: 8px;
+      padding: 40px;
+      text-align: center;
+    }
+    .empty-icon { font-size: 32px; opacity: 0.4; }
+    .empty-title { font-size: 14px; font-weight: 600; color: var(--text); }
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--coral);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .stats-bar {
+      display: flex;
+      gap: 20px;
+      padding: 6px 24px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .stats-bar span { color: var(--text); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">◈ CORAL<span> BEACON</span></div>
+  <div id="status-badge" class="badge badge-muted">—</div>
+  <div class="spacer"></div>
+  <button class="run-btn" id="refresh-btn" onclick="loadLatest()">↺ Refresh</button>
+</header>
+
+<div id="hero" class="hero" style="display:none">
+  <div class="hero-id" id="hero-id"></div>
+  <div class="hero-title" id="hero-title"></div>
+  <div class="hero-meta" id="hero-meta"></div>
+</div>
+
+<div id="stats-bar" class="stats-bar" style="display:none"></div>
+
+<div class="grid">
+  <div class="panel-left">
+    <div class="panel-title">Investigation Timeline</div>
+    <div class="timeline" id="timeline">
+      <div class="empty">
+        <div class="empty-icon">⏳</div>
+        <div class="empty-title">No investigation yet</div>
+        <div>Run <code>GET /investigate/&lt;id&gt;</code> to start</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-right">
+    <div class="panel-title">Postmortem Narrative</div>
+    <div class="narrative" id="narrative">
+      <div class="empty">
+        <div class="empty-icon">📋</div>
+        <div class="empty-title">Waiting for investigation</div>
+        <div>The agent postmortem will appear here once an incident is investigated.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="runbook-panel">
+    <div class="panel-title" style="padding: 8px 16px; border-bottom: 1px solid var(--border);">
+      Living Runbook — Similar Past Incidents
+    </div>
+    <table class="runbook-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Date</th>
+          <th>Service</th>
+          <th>Summary</th>
+          <th>MTTR</th>
+        </tr>
+      </thead>
+      <tbody id="runbook-body">
+        <tr><td colspan="5" style="color:var(--muted); text-align:center; padding:16px;">Loading runbook…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const SOURCE_META = {
+    pd: { label: 'PD', cls: 'pd', icon: '🔴' },
+    dd: { label: 'DD', cls: 'dd', icon: '📊' },
+    sg: { label: 'SG', cls: 'sg', icon: '🌐' },
+    gh: { label: 'GH', cls: 'gh', icon: '🟢' },
+    rb: { label: 'RB', cls: 'rb', icon: '📖' },
+  };
+
+  function toolToSource(toolName) {
+    if (toolName === 'query_runbook' || toolName === 'record_runbook_entry') return 'rb';
+    if (toolName === 'coral_list_tables' || toolName === 'coral_describe_table') return 'pd';
+    const sql = (typeof arguments[1] === 'string' ? arguments[1] : '').toLowerCase();
+    if (sql.includes('datadog')) return 'dd';
+    if (sql.includes('statusgator')) return 'sg';
+    if (sql.includes('github')) return 'gh';
+    if (sql.includes('runbook')) return 'rb';
+    return 'pd';
+  }
+
+  function toolLabel(tc) {
+    if (tc.tool === 'query_runbook')        return 'Queried Living Runbook';
+    if (tc.tool === 'record_runbook_entry') return 'Wrote postmortem to runbook';
+    if (tc.tool === 'coral_list_tables')    return 'Listed all Coral tables';
+    if (tc.tool === 'coral_describe_table') return `Described ${tc.input?.schema}.${tc.input?.table}`;
+    const sql = (tc.input?.sql || '').replace(/\s+/g, ' ').slice(0, 80);
+    return sql || tc.tool;
+  }
+
+  function sourceFromSql(sql = '') {
+    const s = sql.toLowerCase();
+    if (s.includes('datadog'))    return 'dd';
+    if (s.includes('statusgator'))return 'sg';
+    if (s.includes('github'))     return 'gh';
+    if (s.includes('runbook'))    return 'rb';
+    return 'pd';
+  }
+
+  function renderTimeline(toolCalls) {
+    const tl = document.getElementById('timeline');
+    if (!toolCalls || toolCalls.length === 0) {
+      tl.innerHTML = '<div class="empty"><div class="empty-icon">✓</div><div>Mock mode — no tool calls</div></div>';
+      return;
+    }
+    tl.innerHTML = toolCalls.map(tc => {
+      const src = tc.tool === 'query_runbook' || tc.tool === 'record_runbook_entry'
+        ? 'rb'
+        : sourceFromSql(tc.input?.sql || '');
+      const meta = SOURCE_META[src];
+      return `
+        <div class="tl-item">
+          <div class="tl-dot ${meta.cls}">${meta.icon}</div>
+          <div class="tl-body">
+            <div class="tl-source">${meta.label}</div>
+            <div class="tl-desc">${escHtml(toolLabel(tc))}</div>
+            ${tc.output_length ? `<div class="tl-time">${tc.output_length.toLocaleString()} chars returned</div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderNarrative(text) {
+    const el = document.getElementById('narrative');
+    if (!text) {
+      el.innerHTML = '<div class="empty"><div>Agent produced no narrative.</div></div>';
+      return;
+    }
+    // Convert markdown-ish headings, bold, code, lists to HTML
+    let html = escHtml(text)
+      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/^\|(.+)\|$/gm, (m) => {
+        const cells = m.slice(1,-1).split('|').map(c => c.trim());
+        if (cells.every(c => /^[-: ]+$/.test(c))) return '';
+        return '<tr>' + cells.map(c => `<td>${c}</td>`).join('') + '</tr>';
+      })
+      .replace(/(<tr>.*<\/tr>\n?)+/gs, m => `<table>${m}</table>`)
+      .replace(/^- (.+)$/gm, '<li>$1</li>')
+      .replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+    el.innerHTML = html;
+  }
+
+  function urgencyBadge(urgency) {
+    if (!urgency) return '';
+    const cls = urgency === 'high' ? 'badge-red' : 'badge-yellow';
+    return `<span class="badge ${cls}">${urgency.toUpperCase()}</span>`;
+  }
+
+  function modeBadge(mode) {
+    const map = { mock: 'badge-muted', haiku: 'badge-blue', sonnet: 'badge-green' };
+    return `<span class="badge ${map[mode] || 'badge-muted'}">${(mode||'?').toUpperCase()}</span>`;
+  }
+
+  async function loadLatest() {
+    document.getElementById('refresh-btn').disabled = true;
+    document.getElementById('status-badge').className = 'badge badge-muted';
+    document.getElementById('status-badge').textContent = '…';
+    try {
+      const r = await fetch('/api/latest');
+      if (!r.ok) throw new Error(r.statusText);
+      const data = await r.json();
+
+      // Hero
+      const hero = document.getElementById('hero');
+      hero.style.display = '';
+      document.getElementById('hero-id').textContent = `Incident ${data.incident_id}`;
+      document.getElementById('hero-title').textContent = data.postmortem
+        ? data.postmortem.split('\n').find(l => l.startsWith('##'))?.replace(/^## /, '') || data.incident_id
+        : data.incident_id;
+      document.getElementById('hero-meta').innerHTML = `
+        <span>${urgencyBadge('high')}</span>
+        <span>Mode: ${modeBadge(data.mode)}</span>
+        <span>Turns: <b>${data.turns}</b></span>
+        <span>Tool calls: <b>${(data.tool_calls||[]).length}</b></span>
+      `;
+
+      // Stats bar
+      const u = data.usage || {};
+      const cacheHit = u.cache_read_tokens || 0;
+      const total = (u.input_tokens || 0) + cacheHit;
+      const pct = total ? Math.round(cacheHit / total * 100) : 0;
+      document.getElementById('stats-bar').style.display = '';
+      document.getElementById('stats-bar').innerHTML = `
+        <div>Input tokens: <span>${(u.input_tokens||0).toLocaleString()}</span></div>
+        <div>Output tokens: <span>${(u.output_tokens||0).toLocaleString()}</span></div>
+        <div>Cache read: <span style="color:var(--green)">${cacheHit.toLocaleString()} (${pct}%)</span></div>
+        <div>Cache write: <span>${(u.cache_creation_tokens||0).toLocaleString()}</span></div>
+      `;
+
+      // Status badge
+      document.getElementById('status-badge').className = 'badge badge-red';
+      document.getElementById('status-badge').textContent = 'TRIGGERED';
+
+      renderTimeline(data.tool_calls);
+      renderNarrative(data.postmortem);
+    } catch (e) {
+      document.getElementById('status-badge').className = 'badge badge-muted';
+      document.getElementById('status-badge').textContent = 'NO DATA';
+      console.error(e);
+    } finally {
+      document.getElementById('refresh-btn').disabled = false;
+    }
+  }
+
+  async function loadRunbook() {
+    const tbody = document.getElementById('runbook-body');
+    try {
+      const r = await fetch('/api/runbook');
+      const data = await r.json();
+      const entries = data.entries || [];
+      if (entries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:16px;">Runbook is empty</td></tr>';
+        return;
+      }
+      tbody.innerHTML = entries.map(e => `
+        <tr>
+          <td class="runbook-id">${escHtml(e.id||'')}</td>
+          <td class="runbook-time">${escHtml((e.created_at||'').slice(0,10))}</td>
+          <td>${escHtml(e.service||'')}</td>
+          <td class="runbook-summary">${escHtml((e.summary||'').slice(0,120))}${(e.summary||'').length > 120 ? '…' : ''}</td>
+          <td class="runbook-mins">${escHtml(e.resolution_minutes||'?')}m</td>
+        </tr>`).join('');
+    } catch (e) {
+      tbody.innerHTML = '<tr><td colspan="5" style="color:var(--red)">Failed to load runbook</td></tr>';
+    }
+  }
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  // Boot
+  loadLatest();
+  loadRunbook();
+  // Refresh runbook every 30s in case the agent writes a new entry
+  setInterval(loadRunbook, 30_000);
+</script>
+</body>
+</html>
