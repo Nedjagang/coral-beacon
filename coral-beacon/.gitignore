@@ -1,0 +1,20 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Secrets — never commit
+.env
+
+# Coral runtime state
+.lock
+telemetry/
+
+# Coral workspace — contains secrets.env files, machine-specific paths
+coral-config/workspaces/
+coral-config/telemetry/
+
+# Runtime-generated files (safe to regenerate)
+data/latest_investigation.json

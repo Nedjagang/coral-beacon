@@ -8,7 +8,7 @@ tables:
   - name: entries
     description: Living Runbook — past incident postmortems written by the Coral Beacon agent
     source:
-      location: file:///home/ubuntu/coral/coral-beacon/data/
+      location: file://CORAL_BEACON_DATA_DIR/
       glob: "runbook.jsonl"
     columns:
       - name: id
